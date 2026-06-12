@@ -282,6 +282,11 @@ exports.forgotPassword = async ({ email }) => {
     subject: 'Reset Password Notification',
     html: `
       <div style="background-color: #f3f4f6; padding: 40px; font-family: sans-serif; color: #333;">
+        <div style="text-align: center; margin-bottom: 20px;">
+          <svg style="width: 40px; height: 40px; color: #111827;" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+          </svg>
+        </div>
         <div style="max-width: 500px; margin: 0 auto; background: white; border-radius: 8px; padding: 30px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center;">
           <h1 style="color: #111827; font-size: 24px; margin-bottom: 20px;">Hello!</h1>
           <p style="color: #4b5563; font-size: 16px; margin-bottom: 30px; line-height: 1.5;">
@@ -293,8 +298,11 @@ exports.forgotPassword = async ({ email }) => {
           <p style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">
             This password reset link will expire in 60 minutes.
           </p>
-          <p style="color: #6b7280; font-size: 14px; margin-bottom: 0;">
+          <p style="color: #6b7280; font-size: 14px; margin-bottom: 30px;">
             If you did not request a password reset, no further action is required.
+          </p>
+          <p style="color: #4b5563; font-size: 14px; text-align: left; margin-bottom: 5px;">
+            Regards,<br><br><strong>Learnit</strong>
           </p>
           <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
           <p style="color: #6b7280; font-size: 12px; text-align: left;">
