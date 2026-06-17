@@ -9,7 +9,8 @@ app.use(cors({
     'http://localhost:5173',
     'http://localhost:3000',
     'https://learnit.vercel.app'
-  ]
+  ],
+  credentials: true
 }));
 app.use(express.json());
 
