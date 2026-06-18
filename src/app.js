@@ -11,7 +11,10 @@ app.use(cors({
     'https://learnit.vercel.app',
     'https://learnit-id.vercel.app'
   ],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200,
 }));
 app.use(express.json());
 
