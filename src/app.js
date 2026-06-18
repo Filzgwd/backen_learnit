@@ -2,6 +2,13 @@ const express = require('express');
 
 const app = express();
 
+// Simple CORS test endpoint at root
+app.get('/cors-test', (req, res) => {
+  res.set('X-Test', 'works');
+  res.set('Access-Control-Allow-Origin', 'https://learnit-id.vercel.app');
+  res.json({ status: 'CORS test endpoint working' });
+});
+
 // Manual CORS middleware - NO cors() package
 app.use((req, res, next) => {
   console.log('[CORS]', req.method, req.path);
