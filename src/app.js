@@ -4,10 +4,13 @@ const cors = require('cors');
 const app = express();
 const forumRoutes = require('./routes/forumRoutes');
 
-// Allow dynamic origin so production frontends (Vercel) are accepted.
-// This sets Access-Control-Allow-Origin to the request Origin value.
 app.use(cors({
-  origin: true,
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://learnit.vercel.app',
+    'https://learnit-id.vercel.app'
+  ],
   credentials: true,
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
