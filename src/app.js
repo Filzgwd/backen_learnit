@@ -1,33 +1,23 @@
 const express = require('express');
+const cors = require('cors');
 
 const app = express();
 
-// Simple CORS test endpoint at root
-app.get('/cors-test', (req, res) => {
-  res.set('X-Test', 'works');
-  res.set('Access-Control-Allow-Origin', 'https://learnit-id.vercel.app');
-  res.json({ status: 'CORS test endpoint working' });
-});
+// CORS with function-based origin check
+const corsOptions = {
+  origin: function(origin, callback) {
+    console.log('[CORS] Checking origin:', origin);
+    // Allow all origins including undefined (for non-CORS requests)
+    callback(null, true);
+  },
+  credentials: false,
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200,
+  preflightContinue: false,
+};
 
-// Manual CORS middleware - NO cors() package
-app.use((req, res, next) => {
-  console.log('[CORS]', req.method, req.path);
-  
-  res.set('X-Manual-CORS', 'active');
-  res.set('Access-Control-Allow-Origin', '*');
-  res.set('Access-Control-Allow-Methods', 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS');
-  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  
-  console.log('[CORS] Headers set');
-  
-  // Handle preflight
-  if (req.method === 'OPTIONS') {
-    console.log('[CORS] Responding to OPTIONS');
-    return res.status(200).end();
-  }
-  
-  next();
-});
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // routes
