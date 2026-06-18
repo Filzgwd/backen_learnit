@@ -9,8 +9,7 @@ const corsOptions = {
   credentials: false,
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStat
-  us: 200,
+  optionsSuccessStatus: 200,
 };
 
 app.use(cors(corsOptions));
