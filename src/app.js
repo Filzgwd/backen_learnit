@@ -2,9 +2,22 @@ const express = require('express');
 const cors = require('cors');
 
 const app = express();
-const forumRoutes = require('./routes/forumRoutes');
 
-// CORS temporarily set to allow all origins for debugging
+// Manual CORS middleware to ensure headers are always set
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type,Authorization');
+  
+  if (req.method === 'OPTIONS') {
+    res.writeHead(200);
+    res.end();
+    return;
+  }
+  next();
+});
+
+// Also use cors() package as fallback
 app.use(cors({
   origin: '*',
   methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
