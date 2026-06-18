@@ -4,7 +4,8 @@ const app = require('./app');
 const pool = require('./config/db');
 
 app.get('/', (req, res) => {
-  res.send('LearnIT Backend Running');
+  res.setHeader('X-Deployment-Check', 'backend-learnit-20260618');
+  res.send('LearnIT Backend Running - deploy-check');
 });
 
 // Ensure DB configuration exists before trying to connect
