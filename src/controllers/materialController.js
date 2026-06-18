@@ -63,10 +63,30 @@ exports.updateMaterial = async (req, res) => {
 // DELETE MATERIAL
 exports.deleteMaterial = async (req, res) => {
   try {
-    const result = await materialService.deleteMaterial(req.params.id);
+    const materialId = req.params.id;
+    const userId = req.user?.id;
+    
+    console.log('[DELETE_MATERIAL] Request:', {
+      materialId,
+      userId,
+      timestamp: new Date().toISOString(),
+    });
+
+    const result = await materialService.deleteMaterial(materialId);
+    
+    console.log('[DELETE_MATERIAL] Success:', result);
     res.json(result);
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error('[DELETE_MATERIAL] Error:', {
+      error: err.message,
+      code: err.code,
+      materialId: req.params.id,
+      stack: err.stack,
+    });
+    
+    res.status(500).json({ 
+      message: err.message || 'Gagal menghapus materi'
+    });
   }
 };
 

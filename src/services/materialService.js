@@ -89,16 +89,40 @@ exports.updateMaterial = async (id, { title, description, category_id }) => {
 
 //delete material
 exports.deleteMaterial = async (id) => {
-  const result = await pool.query(
-    'DELETE FROM materials WHERE id = $1',
-    [id]
-  );
-  
-  if (result.rowCount === 0) {
-    throw new Error(`Material dengan ID ${id} tidak ditemukan atau sudah dihapus`);
+  try {
+    const result = await pool.query(
+      'DELETE FROM materials WHERE id = $1',
+      [id]
+    );
+    
+    if (result.rowCount === 0) {
+      throw new Error(`Material dengan ID ${id} tidak ditemukan atau sudah dihapus`);
+    }
+    
+    return { success: true, message: 'Materi berhasil dihapus' };
+  } catch (error) {
+    // Log detailed error for debugging
+    console.error('[DELETE_MATERIAL_ERROR]', {
+      materialId: id,
+      errorName: error.name,
+      errorCode: error.code,
+      errorMessage: error.message,
+    });
+    
+    // Handle specific database errors
+    if (error.code === '23503') {
+      // Foreign key constraint violation
+      throw new Error(`Materi tidak bisa dihapus karena masih digunakan di data lain (quiz, progress, dll)`);
+    }
+    
+    if (error.code === '23505') {
+      // Unique constraint violation
+      throw new Error(`Duplikat data - harap refresh dan coba lagi`);
+    }
+    
+    // Re-throw other errors
+    throw error;
   }
-  
-  return { success: true, message: 'Materi berhasil dihapus' };
 };
 
 // search materials by title or description
