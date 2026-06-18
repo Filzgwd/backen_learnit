@@ -89,10 +89,16 @@ exports.updateMaterial = async (id, { title, description, category_id }) => {
 
 //delete material
 exports.deleteMaterial = async (id) => {
-  await pool.query(
+  const result = await pool.query(
     'DELETE FROM materials WHERE id = $1',
     [id]
   );
+  
+  if (result.rowCount === 0) {
+    throw new Error(`Material dengan ID ${id} tidak ditemukan atau sudah dihapus`);
+  }
+  
+  return { success: true, message: 'Materi berhasil dihapus' };
 };
 
 // search materials by title or description

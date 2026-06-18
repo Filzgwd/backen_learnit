@@ -63,8 +63,8 @@ exports.updateMaterial = async (req, res) => {
 // DELETE MATERIAL
 exports.deleteMaterial = async (req, res) => {
   try {
-    await materialService.deleteMaterial(req.params.id);
-    res.json({ message: 'Materi berhasil dihapus' });
+    const result = await materialService.deleteMaterial(req.params.id);
+    res.json(result);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
