@@ -1,30 +1,26 @@
 const express = require('express');
-const cors = require('cors');
 
 const app = express();
 
-// Manual CORS middleware with test header
+// Manual CORS middleware - NO cors() package
 app.use((req, res, next) => {
+  console.log('[CORS]', req.method, req.path);
+  
   res.set('X-Manual-CORS', 'active');
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Methods', 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS');
   res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   
+  console.log('[CORS] Headers set');
+  
   // Handle preflight
   if (req.method === 'OPTIONS') {
+    console.log('[CORS] Responding to OPTIONS');
     return res.status(200).end();
   }
   
   next();
 });
-
-// Also use cors() as fallback
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 200,
-}));
 app.use(express.json());
 
 // routes
