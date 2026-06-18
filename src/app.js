@@ -3,21 +3,8 @@ const cors = require('cors');
 
 const app = express();
 
-// CORS with function-based origin check
-const corsOptions = {
-  origin: function(origin, callback) {
-    console.log('[CORS] Checking origin:', origin);
-    // Allow all origins including undefined (for non-CORS requests)
-    callback(null, true);
-  },
-  credentials: false,
-  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
-  optionsSuccessStatus: 200,
-  preflightContinue: false,
-};
-
-app.use(cors(corsOptions));
+// Simplest possible CORS config
+app.use(cors());
 app.use(express.json());
 
 // routes
