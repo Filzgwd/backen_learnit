@@ -3,8 +3,9 @@ const cors = require('cors');
 
 const app = express();
 
-// Manual CORS middleware
+// Manual CORS middleware with test header
 app.use((req, res, next) => {
+  res.set('X-Manual-CORS', 'active');
   res.set('Access-Control-Allow-Origin', '*');
   res.set('Access-Control-Allow-Methods', 'GET, HEAD, PUT, PATCH, POST, DELETE, OPTIONS');
   res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
