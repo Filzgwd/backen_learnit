@@ -30,8 +30,16 @@ exports.createMaterial = async (data) => {
     return results;
   }
 
-  // single insert
-  const result = await pool.query(`
+  // single insert - map frontend fields to database fields
+  const title = data.title || data.name || '';
+  const description = data.description || data.desc || '';
+  const category_id = data.category_id || null;
+  const image = data.image || null;
+  const videoLink = data.videoLink || null;
+  const blocks = data.blocks || [];
+
+  // Insert main material record
+  const materialResult = await pool.query(`
     INSERT INTO materials (
       category_id,
       title,
@@ -40,22 +48,107 @@ exports.createMaterial = async (data) => {
     VALUES ($1, $2, $3)
     RETURNING *
   `, [
-    data.category_id,
-    data.title,
-    data.description
+    category_id,
+    title,
+    description
   ]);
 
-  return result.rows[0];
+  const material = materialResult.rows[0];
+  let sequence = 1;
+
+  // Insert image as material content if provided
+  if (image && image.trim()) {
+    await pool.query(`
+      INSERT INTO material_contents (material_id, content_type, content, sequence)
+      VALUES ($1, $2, $3, $4)
+    `, [material.id, 'image', image, sequence++]);
+  }
+
+  // Insert video link as material content if provided
+  if (videoLink && videoLink.trim()) {
+    await pool.query(`
+      INSERT INTO material_contents (material_id, content_type, content, sequence)
+      VALUES ($1, $2, $3, $4)
+    `, [material.id, 'video', videoLink, sequence++]);
+  }
+
+  // Insert blocks as material content
+  for (const block of blocks) {
+    if (block.title) {
+      await pool.query(`
+        INSERT INTO material_contents (material_id, content_type, content, sequence)
+        VALUES ($1, $2, $3, $4)
+      `, [material.id, 'text', JSON.stringify(block), sequence++]);
+    }
+  }
+
+  // Fetch the complete material with category info and contents
+  const completeResult = await pool.query(`
+    SELECT m.*, c.name AS category_name FROM materials m
+    LEFT JOIN categories c ON m.category_id = c.id
+    WHERE m.id = $1
+  `, [material.id]);
+
+  const completeMaterial = completeResult.rows[0];
+
+  // Fetch contents
+  const contentsResult = await pool.query(`
+    SELECT * FROM material_contents WHERE material_id = $1 ORDER BY sequence
+  `, [material.id]);
+
+  const contents = contentsResult.rows;
+
+  // Reconstruct the response with all original data
+  return {
+    ...completeMaterial,
+    image,
+    videoLink,
+    blocks,
+    contents
+  };
 };
 
 // get all materials
 exports.getAllMaterials = async () => {
-  const result = await pool.query(
+  const materialsResult = await pool.query(
     `SELECT m.*, c.name AS category_name
      FROM materials m
-     JOIN categories c ON m.category_id = c.id`
+     LEFT JOIN categories c ON m.category_id = c.id
+     ORDER BY m.created_at DESC`
   );
-  return result.rows;
+
+  const materials = materialsResult.rows;
+
+  // Fetch contents for each material
+  for (const material of materials) {
+    const contentsResult = await pool.query(
+      `SELECT * FROM material_contents WHERE material_id = $1 ORDER BY sequence`,
+      [material.id]
+    );
+
+    const contents = contentsResult.rows;
+
+    // Reconstruct image, videoLink, and blocks from contents
+    let image = null;
+    let videoLink = null;
+    const blocks = [];
+
+    for (const content of contents) {
+      if (content.content_type === 'image') {
+        image = content.content;
+      } else if (content.content_type === 'video') {
+        videoLink = content.content;
+      } else if (content.content_type === 'text') {
+        blocks.push(JSON.parse(content.content));
+      }
+    }
+
+    material.image = image;
+    material.videoLink = videoLink;
+    material.blocks = blocks;
+  }
+
+  return materials;
 };
 
 // get material by id
@@ -63,16 +156,55 @@ exports.getMaterialById = async (id) => {
   const result = await pool.query(
     `SELECT m.*, c.name AS category_name
      FROM materials m
-     JOIN categories c ON m.category_id = c.id
+     LEFT JOIN categories c ON m.category_id = c.id
      WHERE m.id = $1`,
     [id]
   );
 
-  return result.rows[0];
+  const material = result.rows[0];
+  if (!material) return null;
+
+  // Fetch contents
+  const contentsResult = await pool.query(
+    `SELECT * FROM material_contents WHERE material_id = $1 ORDER BY sequence`,
+    [id]
+  );
+
+  const contents = contentsResult.rows;
+
+  // Reconstruct image, videoLink, and blocks from contents
+  let image = null;
+  let videoLink = null;
+  const blocks = [];
+
+  for (const content of contents) {
+    if (content.content_type === 'image') {
+      image = content.content;
+    } else if (content.content_type === 'video') {
+      videoLink = content.content;
+    } else if (content.content_type === 'text') {
+      blocks.push(JSON.parse(content.content));
+    }
+  }
+
+  material.image = image;
+  material.videoLink = videoLink;
+  material.blocks = blocks;
+
+  return material;
 };
 
 //update material
-exports.updateMaterial = async (id, { title, description, category_id }) => {
+exports.updateMaterial = async (id, data) => {
+  // Map frontend fields to database fields
+  const title = data.title || data.name || '';
+  const description = data.description || data.desc || '';
+  const category_id = data.category_id || null;
+  const image = data.image || null;
+  const videoLink = data.videoLink || null;
+  const blocks = data.blocks || [];
+
+  // Update main material record
   const result = await pool.query(
     `UPDATE materials
      SET title = $1,
@@ -84,7 +216,44 @@ exports.updateMaterial = async (id, { title, description, category_id }) => {
     [title, description, category_id, id]
   );
 
-  return result.rows[0];
+  const material = result.rows[0];
+
+  // Delete old contents
+  await pool.query(
+    `DELETE FROM material_contents WHERE material_id = $1`,
+    [id]
+  );
+
+  let sequence = 1;
+
+  // Insert image as material content if provided
+  if (image && image.trim()) {
+    await pool.query(`
+      INSERT INTO material_contents (material_id, content_type, content, sequence)
+      VALUES ($1, $2, $3, $4)
+    `, [id, 'image', image, sequence++]);
+  }
+
+  // Insert video link as material content if provided
+  if (videoLink && videoLink.trim()) {
+    await pool.query(`
+      INSERT INTO material_contents (material_id, content_type, content, sequence)
+      VALUES ($1, $2, $3, $4)
+    `, [id, 'video', videoLink, sequence++]);
+  }
+
+  // Insert blocks as material content
+  for (const block of blocks) {
+    if (block.title) {
+      await pool.query(`
+        INSERT INTO material_contents (material_id, content_type, content, sequence)
+        VALUES ($1, $2, $3, $4)
+      `, [id, 'text', JSON.stringify(block), sequence++]);
+    }
+  }
+
+  // Fetch updated material with all data
+  return module.exports.getMaterialById(id);
 };
 
 //delete material

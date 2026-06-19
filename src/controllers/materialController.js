@@ -3,15 +3,16 @@ const materialService = require('../services/materialService');
 // CREATE MATERIAL
 exports.createMaterial = async (req, res) => {
   try {
-
     const data = req.body;
+    console.log('[CREATE_MATERIAL] Request body:', data);
 
     const result = await materialService.createMaterial(data);
+    console.log('[CREATE_MATERIAL] Created material:', result);
 
     res.status(201).json(result);
 
   } catch (error) {
-
+    console.error('[CREATE_MATERIAL] Error:', error.message);
     res.status(500).json({
       message: error.message
     });
@@ -47,15 +48,15 @@ exports.getMaterialById = async (req, res) => {
 //  UPDATE MATERIAL
 exports.updateMaterial = async (req, res) => {
   try {
-    const { title, description, category_id } = req.body;
+    const data = req.body;
+    console.log('[UPDATE_MATERIAL] Request body:', data);
 
-    const result = await materialService.updateMaterial(
-      req.params.id,
-      { title, description, category_id }
-    );
+    const result = await materialService.updateMaterial(req.params.id, data);
+    console.log('[UPDATE_MATERIAL] Updated material:', result);
 
     res.json(result);
   } catch (err) {
+    console.error('[UPDATE_MATERIAL] Error:', err.message);
     res.status(500).json({ message: err.message });
   }
 };
