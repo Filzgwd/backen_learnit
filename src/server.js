@@ -26,10 +26,45 @@ if (!process.env.DATABASE_URL && !process.env.DB_HOST) {
   process.exit(1);
 }
 
+// Seed categories on startup
+async function seedCategories() {
+  const categories = [
+    { name: 'Algoritma & Pemrograman', description: 'Pembelajaran dasar algoritma dan pemrograman' },
+    { name: 'Pengembangan Website', description: 'Pembelajaran web development' },
+    { name: 'Desain UI/UX', description: 'Pembelajaran desain antarmuka dan user experience' },
+    { name: 'Kecerdasan Buatan', description: 'Pembelajaran AI dan machine learning' },
+    { name: 'Pemrograman Mobile', description: 'Pembelajaran mobile app development' },
+    { name: 'Game Development', description: 'Pembelajaran game development' },
+    { name: 'Data Science', description: 'Pembelajaran data science dan analytics' }
+  ];
+
+  try {
+    for (const category of categories) {
+      const existing = await pool.query(
+        'SELECT id FROM categories WHERE name = $1',
+        [category.name]
+      );
+
+      if (existing.rows.length === 0) {
+        await pool.query(
+          'INSERT INTO categories (name, description) VALUES ($1, $2)',
+          [category.name, category.description]
+        );
+        console.log(`✅ Created category: ${category.name}`);
+      }
+    }
+  } catch (error) {
+    console.error('⚠️  Error seeding categories:', error.message);
+  }
+}
+
 // Verify DB connectivity with a simple query (avoids holding a client open)
 pool.query('SELECT 1')
-  .then(() => {
+  .then(async () => {
     console.log('Database connected');
+
+    // Seed categories on startup
+    await seedCategories();
 
     const PORT = process.env.PORT || 5001;
 
