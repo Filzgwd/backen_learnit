@@ -4,40 +4,59 @@ const pool = require('../config/db');
 
 // CREATE QUIZ
 exports.createQuiz = async (data) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    
+    const title = data.title;
+    const category_id = data.category_id;
+    const duration = data.duration || 10;
+    const questions = data.questions || [];
 
-  // bulk insert
-  if (Array.isArray(data)) {
+    const quizResult = await client.query(`
+      INSERT INTO quizzes (category_id, title, duration)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `, [category_id, title, duration]);
 
-    const results = [];
+    const quiz = quizResult.rows[0];
+    const quizQuestions = [];
 
-    for (const item of data) {
-
-      const result = await pool.query(`
-        INSERT INTO quizzes (
-          category_id,
-          title
-        )
+    for (const q of questions) {
+      const qResult = await client.query(`
+        INSERT INTO questions (quiz_id, question)
         VALUES ($1, $2)
         RETURNING *
-      `, [item.category_id, item.title]);
+      `, [quiz.id, q.question || q.text]);
 
-      results.push(result.rows[0]);
+      const questionObj = qResult.rows[0];
+      questionObj.options = [];
+
+      const optionsList = q.options || [];
+      for (const opt of optionsList) {
+        const optResult = await client.query(`
+          INSERT INTO options (question_id, option_text, is_correct)
+          VALUES ($1, $2, $3)
+          RETURNING *
+        `, [questionObj.id, opt.option_text || opt.text, !!opt.is_correct]);
+
+        questionObj.options.push(optResult.rows[0]);
+      }
+
+      quizQuestions.push(questionObj);
     }
 
-    return results;
+    await client.query('COMMIT');
+    return {
+      ...quiz,
+      questions: quizQuestions
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-
-  // single insert
-  const result = await pool.query(`
-    INSERT INTO quizzes (
-      category_id,
-      title
-    )
-    VALUES ($1, $2)
-    RETURNING *
-  `, [data.category_id, data.title]);
-
-  return result.rows[0];
 };
 
 // GET QUIZ BY CATEGORY
@@ -168,6 +187,8 @@ exports.getAllQuiz = async () => {
     SELECT 
       quizzes.id,
       quizzes.title,
+      quizzes.duration,
+      quizzes.category_id,
       categories.name AS category_name
     FROM quizzes
     JOIN categories
@@ -267,21 +288,79 @@ exports.getResults = async (userId) => {
 };
 
 // Update Quiz
-exports.updateQuiz = async (id, { category_id, title }) => {
-  const result = await pool.query(
-    `UPDATE quizzes
-     SET category_id = $1,
-         title = $2
-     WHERE id = $3
-     RETURNING *`,
-    [category_id, title, id]
-  );
+exports.updateQuiz = async (id, data) => {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
 
-  if (result.rows.length === 0) {
-    throw new Error('Quiz tidak ditemukan');
+    const { category_id, title, duration, questions = [] } = data;
+
+    // Update main quiz record
+    const result = await client.query(
+      `UPDATE quizzes
+       SET category_id = $1,
+           title = $2,
+           duration = $3,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE id = $4
+       RETURNING *`,
+      [category_id, title, duration || 10, id]
+    );
+
+    if (result.rows.length === 0) {
+      throw new Error('Quiz tidak ditemukan');
+    }
+
+    const quiz = result.rows[0];
+
+    // Delete old options of questions belonging to this quiz
+    await client.query(`
+      DELETE FROM options 
+      WHERE question_id IN (SELECT id FROM questions WHERE quiz_id = $1)
+    `, [id]);
+
+    // Delete questions
+    await client.query(`
+      DELETE FROM questions WHERE quiz_id = $1
+    `, [id]);
+
+    // Insert new questions and options
+    const quizQuestions = [];
+    for (const q of questions) {
+      const qResult = await client.query(`
+        INSERT INTO questions (quiz_id, question)
+        VALUES ($1, $2)
+        RETURNING *
+      `, [id, q.question || q.text]);
+
+      const questionObj = qResult.rows[0];
+      questionObj.options = [];
+
+      const optionsList = q.options || [];
+      for (const opt of optionsList) {
+        const optResult = await client.query(`
+          INSERT INTO options (question_id, option_text, is_correct)
+          VALUES ($1, $2, $3)
+          RETURNING *
+        `, [questionObj.id, opt.option_text || opt.text, !!opt.is_correct]);
+
+        questionObj.options.push(optResult.rows[0]);
+      }
+
+      quizQuestions.push(questionObj);
+    }
+
+    await client.query('COMMIT');
+    return {
+      ...quiz,
+      questions: quizQuestions
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
   }
-
-  return result.rows[0];
 };
 
 //delete quiz
