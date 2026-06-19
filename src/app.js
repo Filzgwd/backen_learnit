@@ -19,7 +19,10 @@ app.use((req, res, next) => {
   console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
   next();
 });
-app.use(express.json());
+
+// Increase payload size limit for large file uploads and content
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // routes
 app.use('/api/auth', require('./routes/authRoutes'));
