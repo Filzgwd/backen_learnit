@@ -21,10 +21,8 @@ app.use((req, res, next) => {
 });
 
 // Increase payload size limit for large file uploads and content
-// Using raw body parser with higher limit
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ limit: '100mb', extended: true }));
-app.use(express.raw({ limit: '100mb' }));
 
 // routes
 app.use('/api/auth', require('./routes/authRoutes'));
