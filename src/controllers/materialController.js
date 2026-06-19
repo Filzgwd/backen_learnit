@@ -4,10 +4,14 @@ const materialService = require('../services/materialService');
 exports.createMaterial = async (req, res) => {
   try {
     const data = req.body;
-    console.log('[CREATE_MATERIAL] Request body:', data);
+    console.log('[CREATE_MATERIAL] Request body received:', {
+      title: data.title || data.name,
+      hasBlocks: !!data.blocks,
+      blocksCount: (data.blocks || []).length
+    });
 
     const result = await materialService.createMaterial(data);
-    console.log('[CREATE_MATERIAL] Service returned:', {
+    console.log('[CREATE_MATERIAL] Service returned successfully:', {
       id: result.id,
       title: result.title,
       hasBlocks: !!result.blocks,
@@ -19,9 +23,15 @@ exports.createMaterial = async (req, res) => {
     res.status(201).json(result);
 
   } catch (error) {
-    console.error('[CREATE_MATERIAL] Error:', error.message);
+    console.error('[CREATE_MATERIAL] Error caught:', {
+      message: error.message,
+      code: error.code,
+      detail: error.detail,
+      stack: error.stack.split('\n').slice(0, 5).join('\n')
+    });
     res.status(500).json({
-      message: error.message
+      message: error.message,
+      error: error.detail || error.code
     });
 
   }
