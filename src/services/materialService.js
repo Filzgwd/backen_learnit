@@ -2,6 +2,14 @@ const pool = require('../config/db');
 
 // create material
 exports.createMaterial = async (data) => {
+  console.log('[createMaterial] Received data:', JSON.stringify({
+    title: data.title || data.name,
+    category_id: data.category_id,
+    hasImage: !!data.image,
+    hasVideoLink: !!data.videoLink,
+    blocksCount: (data.blocks || []).length,
+    blocksTitles: (data.blocks || []).map(b => b.title || '(empty)').join(', ')
+  }, null, 2));
 
   // bulk insert
   if (Array.isArray(data)) {
@@ -54,6 +62,8 @@ exports.createMaterial = async (data) => {
   ]);
 
   const material = materialResult.rows[0];
+  console.log(`[createMaterial] Created material ${material.id}: ${title}`);
+
   let sequence = 1;
 
   // Insert image as material content if provided
@@ -62,6 +72,7 @@ exports.createMaterial = async (data) => {
       INSERT INTO material_contents (material_id, content_type, content, sequence)
       VALUES ($1, $2, $3, $4)
     `, [material.id, 'image', image, sequence++]);
+    console.log(`[createMaterial] Stored image for material ${material.id}`);
   }
 
   // Insert video link as material content if provided
@@ -70,17 +81,24 @@ exports.createMaterial = async (data) => {
       INSERT INTO material_contents (material_id, content_type, content, sequence)
       VALUES ($1, $2, $3, $4)
     `, [material.id, 'video', videoLink, sequence++]);
+    console.log(`[createMaterial] Stored video link for material ${material.id}`);
   }
 
   // Insert blocks as material content
+  let blocksStored = 0;
   for (const block of blocks) {
-    if (block.title) {
+    if (block.title && block.title.trim()) {
       await pool.query(`
         INSERT INTO material_contents (material_id, content_type, content, sequence)
         VALUES ($1, $2, $3, $4)
       `, [material.id, 'text', JSON.stringify(block), sequence++]);
+      blocksStored++;
+      console.log(`[createMaterial] Stored block "${block.title}" for material ${material.id}`);
+    } else {
+      console.log(`[createMaterial] Skipped empty block for material ${material.id}`);
     }
   }
+  console.log(`[createMaterial] Total blocks stored: ${blocksStored}/${blocks.length}`);
 
   // Fetch the complete material with category info and contents
   const completeResult = await pool.query(`
@@ -127,6 +145,7 @@ exports.getAllMaterials = async () => {
     );
 
     const contents = contentsResult.rows;
+    console.log(`[getAllMaterials] Material ${material.id}: ${contents.length} contents found`);
 
     // Reconstruct image, videoLink, and blocks from contents
     let image = null;
@@ -134,18 +153,25 @@ exports.getAllMaterials = async () => {
     const blocks = [];
 
     for (const content of contents) {
-      if (content.content_type === 'image') {
-        image = content.content;
-      } else if (content.content_type === 'video') {
-        videoLink = content.content;
-      } else if (content.content_type === 'text') {
-        blocks.push(JSON.parse(content.content));
+      try {
+        if (content.content_type === 'image') {
+          image = content.content;
+        } else if (content.content_type === 'video') {
+          videoLink = content.content;
+        } else if (content.content_type === 'text') {
+          const blockData = JSON.parse(content.content);
+          blocks.push(blockData);
+          console.log(`[getAllMaterials] Parsed block: ${blockData.title}`);
+        }
+      } catch (error) {
+        console.error(`[getAllMaterials] Error parsing content: ${error.message}`, content);
       }
     }
 
     material.image = image;
     material.videoLink = videoLink;
     material.blocks = blocks;
+    console.log(`[getAllMaterials] Material ${material.title}: ${blocks.length} blocks loaded`);
   }
 
   return materials;
@@ -171,6 +197,7 @@ exports.getMaterialById = async (id) => {
   );
 
   const contents = contentsResult.rows;
+  console.log(`[getMaterialById] Material ${id}: ${contents.length} contents found`);
 
   // Reconstruct image, videoLink, and blocks from contents
   let image = null;
@@ -178,18 +205,25 @@ exports.getMaterialById = async (id) => {
   const blocks = [];
 
   for (const content of contents) {
-    if (content.content_type === 'image') {
-      image = content.content;
-    } else if (content.content_type === 'video') {
-      videoLink = content.content;
-    } else if (content.content_type === 'text') {
-      blocks.push(JSON.parse(content.content));
+    try {
+      if (content.content_type === 'image') {
+        image = content.content;
+      } else if (content.content_type === 'video') {
+        videoLink = content.content;
+      } else if (content.content_type === 'text') {
+        const blockData = JSON.parse(content.content);
+        blocks.push(blockData);
+        console.log(`[getMaterialById] Parsed block: ${blockData.title}`);
+      }
+    } catch (error) {
+      console.error(`[getMaterialById] Error parsing content: ${error.message}`, content);
     }
   }
 
   material.image = image;
   material.videoLink = videoLink;
   material.blocks = blocks;
+  console.log(`[getMaterialById] Material ${material.title}: ${blocks.length} blocks loaded`);
 
   return material;
 };
