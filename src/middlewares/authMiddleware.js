@@ -27,8 +27,12 @@ module.exports = (req, res, next) => {
     const decoded =
       jwt.verify(token, process.env.JWT_SECRET || 'secret');
 
-    req.user = decoded;
-    console.log('[AUTH] User authenticated:', decoded.id, 'Role:', decoded.role);
+    req.user = {
+      ...decoded,
+      id: decoded.id || decoded.userId,
+      userId: decoded.userId || decoded.id,
+    };
+    console.log('[AUTH] User authenticated:', req.user.id, 'Role:', req.user.role);
 
     next();
 

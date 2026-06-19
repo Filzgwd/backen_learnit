@@ -231,57 +231,108 @@ exports.getAllQuiz = async () => {
 // ================= SUBMIT QUIZ =================
 
 exports.submitQuiz = async (userId, { quiz_id, answers }) => {
-  let correctCount = 0;
-
-  for (const ans of answers) {
-    const { question_id, selected_option_ids } = ans;
-
-    const correctOptions = await pool.query(
-      `SELECT id FROM options 
-       WHERE question_id = $1 AND is_correct = true`,
-      [question_id]
-    );
-
-    const correctIds = correctOptions.rows.map(o => o.id);
-
-    const isCorrect =
-      correctIds.length === selected_option_ids.length &&
-      correctIds.every(id => selected_option_ids.includes(id));
-
-    if (isCorrect) correctCount++;
-
-    for (const optId of selected_option_ids) {
-      await pool.query(
-        `INSERT INTO user_answers 
-         (user_id, question_id, selected_option_id, is_correct)
-         VALUES ($1, $2, $3, $4)`,
-        [userId, question_id, optId, isCorrect]
-      );
-    }
+  if (!userId) {
+    throw new Error('User tidak valid. Silakan login ulang.');
   }
 
-  const total = answers.length;
-  const score = Math.round((correctCount / total) * 100);
+  if (!quiz_id) {
+    throw new Error('quiz_id wajib diisi');
+  }
 
-  await pool.query(
-    `INSERT INTO quiz_results 
-     (user_id, quiz_id, score, total_questions, correct_answers)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [userId, quiz_id, score, total, correctCount]
-  );
+  if (!Array.isArray(answers) || answers.length === 0) {
+    throw new Error('Jawaban kuis wajib diisi');
+  }
 
-  return { score, total, correct: correctCount };
+  let correctCount = 0;
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    for (const ans of answers) {
+      const { question_id } = ans;
+      const selectedOptionIds = ans.selected_option_ids || ans.selectedOptionIds || ans.selected_option_id || ans.selectedOptionId || [];
+      const selectedIds = (Array.isArray(selectedOptionIds) ? selectedOptionIds : [selectedOptionIds])
+        .filter(Boolean)
+        .map(String);
+
+      if (!question_id) {
+        throw new Error('question_id wajib diisi pada setiap jawaban');
+      }
+
+      const correctOptions = await client.query(
+        `SELECT id FROM options 
+         WHERE question_id = $1 AND is_correct = true`,
+        [question_id]
+      );
+
+      const correctIds = correctOptions.rows.map(o => String(o.id));
+
+      const isCorrect =
+        correctIds.length === selectedIds.length &&
+        correctIds.every(id => selectedIds.includes(id));
+
+      if (isCorrect) correctCount++;
+
+      for (const optId of selectedIds) {
+        await client.query(
+          `INSERT INTO user_answers 
+           (user_id, question_id, selected_option_id, is_correct)
+           VALUES ($1, $2, $3, $4)`,
+          [userId, question_id, optId, isCorrect]
+        );
+      }
+    }
+
+    const total = answers.length;
+    const score = Math.round((correctCount / total) * 100);
+
+    const result = await client.query(
+      `INSERT INTO quiz_results 
+       (user_id, quiz_id, score, total_questions, correct_answers)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [userId, quiz_id, score, total, correctCount]
+    );
+
+    await client.query('COMMIT');
+    return {
+      ...result.rows[0],
+      score,
+      total,
+      correct: correctCount
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 // ================= GET RESULT =================
 
 exports.getResults = async (userId) => {
+  if (!userId) {
+    throw new Error('User tidak valid. Silakan login ulang.');
+  }
+
   const result = await pool.query(`
-    SELECT qr.score, qr.correct_answers, qr.total_questions, c.name
+    SELECT 
+      qr.id,
+      qr.quiz_id,
+      qr.score,
+      qr.correct_answers,
+      qr.total_questions,
+      qr.created_at,
+      q.category_id,
+      q.title AS quiz_title,
+      c.name AS category_name
     FROM quiz_results qr
     JOIN quizzes q ON qr.quiz_id = q.id
     JOIN categories c ON q.category_id = c.id
     WHERE qr.user_id = $1
+    ORDER BY qr.created_at DESC
   `, [userId]);
 
   return result.rows;

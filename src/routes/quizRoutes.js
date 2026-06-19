@@ -19,14 +19,14 @@ router.post('/option', auth, role("admin"), controller.createOption);
 router.put('/option/:id', auth, role("admin"), controller.updateOption);
 router.delete('/option/:id', auth, role("admin"), controller.deleteOption);
 
+// RESULTS
+router.get('/results/me', auth, controller.getResults);
+
 // DETAIL QUIZ
 router.get('/', auth, controller.getAllQuiz);
 router.get('/:quizId', auth, controller.getQuizDetail);
 
 // SUBMIT
 router.post('/submit', auth, controller.submitQuiz);
-
-// RESULTS
-router.get('/results/me', auth, controller.getResults);
 
 module.exports = router;
