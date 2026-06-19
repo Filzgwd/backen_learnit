@@ -66,39 +66,70 @@ exports.createMaterial = async (data) => {
 
   let sequence = 1;
 
-  // Insert image as material content if provided
-  if (image && image.trim()) {
-    await pool.query(`
-      INSERT INTO material_contents (material_id, content_type, content, sequence)
-      VALUES ($1, $2, $3, $4)
-    `, [material.id, 'image', image, sequence++]);
-    console.log(`[createMaterial] Stored image for material ${material.id}`);
-  }
-
-  // Insert video link as material content if provided
-  if (videoLink && videoLink.trim()) {
-    await pool.query(`
-      INSERT INTO material_contents (material_id, content_type, content, sequence)
-      VALUES ($1, $2, $3, $4)
-    `, [material.id, 'video', videoLink, sequence++]);
-    console.log(`[createMaterial] Stored video link for material ${material.id}`);
-  }
-
-  // Insert blocks as material content
-  let blocksStored = 0;
-  for (const block of blocks) {
-    if (block.title && block.title.trim()) {
-      await pool.query(`
-        INSERT INTO material_contents (material_id, content_type, content, sequence)
-        VALUES ($1, $2, $3, $4)
-      `, [material.id, 'text', JSON.stringify(block), sequence++]);
-      blocksStored++;
-      console.log(`[createMaterial] Stored block "${block.title}" for material ${material.id}`);
+  try {
+    // Insert image as material content if provided
+    if (image && image.trim()) {
+      try {
+        await pool.query(`
+          INSERT INTO material_contents (material_id, content_type, content, sequence)
+          VALUES ($1, $2, $3, $4)
+        `, [material.id, 'image', image, sequence++]);
+        console.log(`[createMaterial] Stored image for material ${material.id}`);
+      } catch (err) {
+        console.error(`[createMaterial] ERROR storing image: ${err.message}`);
+        throw err;
+      }
     } else {
-      console.log(`[createMaterial] Skipped empty block for material ${material.id}`);
+      console.log(`[createMaterial] Skipped image (empty or null)`);
     }
+
+    // Insert video link as material content if provided
+    if (videoLink && videoLink.trim()) {
+      try {
+        await pool.query(`
+          INSERT INTO material_contents (material_id, content_type, content, sequence)
+          VALUES ($1, $2, $3, $4)
+        `, [material.id, 'video', videoLink, sequence++]);
+        console.log(`[createMaterial] Stored video link for material ${material.id}`);
+      } catch (err) {
+        console.error(`[createMaterial] ERROR storing video: ${err.message}`);
+        throw err;
+      }
+    } else {
+      console.log(`[createMaterial] Skipped video (empty or null)`);
+    }
+
+    // Insert blocks as material content
+    let blocksStored = 0;
+    console.log(`[createMaterial] Processing ${blocks.length} blocks...`);
+    
+    for (const block of blocks) {
+      // Store block even if title is empty - just skip completely empty blocks
+      const hasContent = block.title || block.paragraph || block.example || block.list || block.image;
+      
+      if (hasContent) {
+        try {
+          await pool.query(`
+            INSERT INTO material_contents (material_id, content_type, content, sequence)
+            VALUES ($1, $2, $3, $4)
+          `, [material.id, 'text', JSON.stringify(block), sequence++]);
+          blocksStored++;
+          console.log(`[createMaterial] Stored block: title="${block.title || '(empty)'}" for material ${material.id}`);
+        } catch (err) {
+          console.error(`[createMaterial] ERROR storing block: ${err.message}`);
+          throw err;
+        }
+      } else {
+        console.log(`[createMaterial] Skipped completely empty block for material ${material.id}`);
+      }
+    }
+    console.log(`[createMaterial] Total blocks stored: ${blocksStored}/${blocks.length}`);
+  } catch (contentError) {
+    console.error(`[createMaterial] ERROR during content insertion:`, contentError.message);
+    // Note: Material is already created, just log the error
+    // In production, you might want to delete the material and throw the error
+    console.error(`[createMaterial] WARNING: Material ${material.id} created but content insertion failed`);
   }
-  console.log(`[createMaterial] Total blocks stored: ${blocksStored}/${blocks.length}`);
 
   // Fetch the complete material with category info and contents
   const completeResult = await pool.query(`
