@@ -4,7 +4,7 @@ exports.createPost = async (req, res) => {
   try {
 
     const result = await service.createPost({
-      user_id: req.user.userId,
+      user_id: req.user.id || req.user.userId,
       title: req.body.title,
       content: req.body.content
     });

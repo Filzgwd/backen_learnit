@@ -6,7 +6,7 @@ exports.createComment = async (req, res) => {
 
     const result = await service.createComment({
       post_id: req.body.post_id,
-      user_id: req.user.userId,
+      user_id: req.user.id || req.user.userId,
       content: req.body.content
     });
 
@@ -59,7 +59,7 @@ exports.deleteComment = async (req, res) => {
     try {
         const result = await service.deleteComment( 
             req.params.id,
-            req.user.userId
+            req.user.id || req.user.userId
         );
             if (!result) {
       return res.status(404).json({ message: 'Komentar telah dihapus' });

@@ -60,7 +60,7 @@ exports.updateComment = async (id, user, content) => {
     SET content = $3
     WHERE id = $1 AND user_id = $2
     RETURNING *
-  `, [id, user.userId, content]);
+  `, [id, user.id || user.userId, content]);
 
   return result.rows[0];
 };

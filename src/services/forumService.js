@@ -73,7 +73,8 @@ exports.deletePost = async (
   // cek permission
   if (
     user.role !== "admin" &&
-    postData.user_id !== user.userId
+    postData.user_id !== user.userId &&
+    postData.user_id !== user.id
   ) {
 
     throw new Error("Forbidden");
