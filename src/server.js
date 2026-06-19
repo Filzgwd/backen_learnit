@@ -34,8 +34,6 @@ async function seedCategories() {
     { name: 'Desain UI/UX', description: 'Pembelajaran desain antarmuka dan user experience' },
     { name: 'Kecerdasan Buatan', description: 'Pembelajaran AI dan machine learning' },
     { name: 'Pemrograman Mobile', description: 'Pembelajaran mobile app development' },
-    { name: 'Game Development', description: 'Pembelajaran game development' },
-    { name: 'Data Science', description: 'Pembelajaran data science dan analytics' }
   ];
 
   try {
