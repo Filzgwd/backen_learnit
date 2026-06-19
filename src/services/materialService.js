@@ -118,21 +118,30 @@ exports.createMaterial = async (data) => {
 
   const completeMaterial = completeResult.rows[0];
 
-  // Fetch contents
+  // Fetch contents from database to verify they were stored
   const contentsResult = await pool.query(`
     SELECT * FROM material_contents WHERE material_id = $1 ORDER BY sequence
   `, [material.id]);
 
   const contents = contentsResult.rows;
+  
+  console.log(`[createMaterial] Final response - material ${material.id}:`);
+  console.log(`  - Stored blocks count: ${blocksStored}`);
+  console.log(`  - DB contents count: ${contents.length}`);
+  console.log(`  - Original blocks count: ${blocks.length}`);
+  console.log(`  - Contents from DB:`, contents.map(c => ({ type: c.content_type, seq: c.sequence })));
 
   // Reconstruct the response with all original data
-  return {
+  const responseData = {
     ...completeMaterial,
     image,
     videoLink,
     blocks,
     contents
   };
+  
+  console.log(`[createMaterial] Returning response with blocks:`, responseData.blocks?.length || 0);
+  return responseData;
 };
 
 // get all materials

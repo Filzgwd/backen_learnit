@@ -7,7 +7,14 @@ exports.createMaterial = async (req, res) => {
     console.log('[CREATE_MATERIAL] Request body:', data);
 
     const result = await materialService.createMaterial(data);
-    console.log('[CREATE_MATERIAL] Created material:', result);
+    console.log('[CREATE_MATERIAL] Service returned:', {
+      id: result.id,
+      title: result.title,
+      hasBlocks: !!result.blocks,
+      blocksCount: result.blocks?.length || 0,
+      hasContents: !!result.contents,
+      contentsCount: result.contents?.length || 0
+    });
 
     res.status(201).json(result);
 
